@@ -3,51 +3,73 @@ deposita en un buffer compartido y otro que lee elementos de ese buffer o array
 (consume). En todo momento ha de impedirse que el productor escriba en el buffer
 sin que el consumidor haya procesado ese elemento y que el consumidor lea sin que
 el productor haya puesto nada en el buffer.*/
-public class Consumidor extends Thread{
-    private int IDE;
+public class Ejercicio4 {
+    public static void main(String[] args) {
+        Buffer contenedor = new Buffer();
+        Productor produce = new Productor(contenedor);
+        Consumidor consume = new Consumidor(contenedor);
 
-    public Consumidor( int IDE) {
-        this.IDE = IDE;
-    }
-
-    public int getIDE() {
-        return IDE;
-    }
-
-    public void run() {
-        int value = 0, ide;
-        for(int i= 0; i < 10; i++) {
-            ide = Consumidor.getIDE();
-            System.out.println("IDE Consumidor : "+ ide);
-            System.out.println("Consumidor. get: " + value);
-        }
+        produce.start();
+        consume.start();
     }
 }
-public class Productor extends Thread{
-    private int IDE;
 
-    public Productor( int IDE) {
-        this.IDE = IDE;
-    }
+class Buffer {
+    private int dato;
+    private boolean disponible = false;
 
-    public void run() {
-        for(int i = 0; i < 10; i++) {
-            System.out.println("Productor. put: "+i);
+    public synchronized void put(int dato) {
+        while (disponible) {
             try {
-                sleep((int) (Math.random() * 100));
+                wait(); // Espera si el dato ya está disponible
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
+        this.dato = dato;
+        disponible = true;
+        notify();
+    }
+    public synchronized int get() {
+        while (!disponible) {
+            try {
+                wait(); // Espera si el dato no está disponible
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        disponible = false;
+        notify();
+        return dato;
     }
 }
-public class Ejercicio4 extends Thread{
 
-    public static void main(String[] args) {
+class Productor extends Thread {
+    private Buffer buffer;
 
-        Productor produce = new Productor(1);
-        Consumidor consume = new Consumidor(1);
+    public Productor(Buffer buffer) {
+        this.buffer = buffer;
+    }
 
-        produce.start(); //ponemos al hilo en ready
-        consume.start();
+    public void run() {
+        for (int i = 0; i < 10; i++) {
+            buffer.put(i);
+            System.out.println("Valor del productor: " + i);
+        }
+    }
+}
+
+class Consumidor extends Thread {
+    private Buffer buffer;
+
+    public Consumidor(Buffer buffer) {
+        this.buffer = buffer;
+    }
+
+    public void run() {
+        for (int i = 0; i < 10; i++) {
+            int valor = buffer.get();
+            System.out.println("Valor del consumidor: " + valor);
+        }
     }
 }
